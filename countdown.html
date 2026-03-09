@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Countdown</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    min-height: 100vh;
+    background: #0a0a0f;
+    color: #fff;
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+  }
+
+  /* Фоновые частицы */
+  .bg {
+    position: fixed; inset: 0; z-index: 0;
+    background:
+      radial-gradient(ellipse at 20% 50%, rgba(99,102,241,.15) 0%, transparent 60%),
+      radial-gradient(ellipse at 80% 20%, rgba(168,85,247,.12) 0%, transparent 50%),
+      radial-gradient(ellipse at 60% 80%, rgba(59,130,246,.1) 0%, transparent 50%);
+  }
+
+  .wrapper {
+    position: relative; z-index: 1;
+    text-align: center;
+    padding: 2rem 1.5rem;
+    max-width: 700px;
+    width: 100%;
+  }
+
+  /* Переключатель событий */
+  #event-tabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: .5rem;
+    justify-content: center;
+    margin-bottom: 2.5rem;
+  }
+
+  .tab-btn {
+    padding: .45rem 1.1rem;
+    border-radius: 999px;
+    border: 1.5px solid rgba(255,255,255,.15);
+    background: rgba(255,255,255,.05);
+    color: rgba(255,255,255,.6);
+    font-size: .85rem;
+    cursor: pointer;
+    transition: all .2s;
+  }
+  .tab-btn:hover { background: rgba(255,255,255,.1); color: #fff; }
+  .tab-btn.active {
+    background: rgba(99,102,241,.35);
+    border-color: rgba(99,102,241,.8);
+    color: #fff;
+  }
+
+  /* Название события */
+  h1 {
+    font-size: clamp(1.2rem, 4vw, 1.7rem);
+    font-weight: 400;
+    color: rgba(255,255,255,.55);
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    margin-bottom: 2.5rem;
+  }
+
+  /* Блоки цифр */
+  .countdown {
+    display: flex;
+    gap: clamp(.6rem, 3vw, 1.5rem);
+    justify-content: center;
+    flex-wrap: wrap;
+    margin-bottom: 2.5rem;
+  }
+
+  .unit {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: .5rem;
+  }
+
+  .num {
+    font-size: clamp(2.8rem, 10vw, 5.5rem);
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    line-height: 1;
+    background: linear-gradient(135deg, #fff 30%, rgba(168,85,247,.8));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    min-width: clamp(2ch, 8vw, 3ch);
+  }
+
+  .label {
+    font-size: clamp(.65rem, 2vw, .8rem);
+    color: rgba(255,255,255,.35);
+    letter-spacing: .15em;
+    text-transform: uppercase;
+  }
+
+  .sep {
+    font-size: clamp(2rem, 8vw, 4rem);
+    font-weight: 300;
+    color: rgba(255,255,255,.2);
+    align-self: flex-start;
+    padding-top: .15em;
+    line-height: 1;
+  }
+
+  /* Итого секунд */
+  .total {
+    font-size: clamp(.8rem, 2.5vw, 1rem);
+    color: rgba(255,255,255,.3);
+    font-style: italic;
+    margin-bottom: 2rem;
+  }
+
+  /* Прогресс бар */
+  .progress-wrap {
+    width: 100%;
+    max-width: 400px;
+    margin: 0 auto 2.5rem;
+  }
+  .progress-bg {
+    height: 3px;
+    background: rgba(255,255,255,.08);
+    border-radius: 99px;
+    overflow: hidden;
+  }
+  .progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #6366f1, #a855f7);
+    border-radius: 99px;
+    transition: width .5s ease;
+  }
+
+  /* Финиш */
+  .finished {
+    font-size: clamp(1.5rem, 5vw, 2.5rem);
+    font-weight: 600;
+    background: linear-gradient(135deg, #f59e0b, #ef4444);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+</style>
+</head>
+<body>
+<div class="bg"></div>
+<div class="wrapper">
+
+  <!-- Вкладки событий -->
+  <div id="event-tabs"></div>
+
+  <!-- Название -->
+  <h1 id="event-name">Загрузка...</h1>
+
+  <!-- Цифры -->
+  <div class="countdown" id="countdown">
+    <div class="unit"><span class="num" id="d">--</span><span class="label">дней</span></div>
+    <div class="sep">:</div>
+    <div class="unit"><span class="num" id="h">--</span><span class="label">часов</span></div>
+    <div class="sep">:</div>
+    <div class="unit"><span class="num" id="m">--</span><span class="label">минут</span></div>
+    <div class="sep">:</div>
+    <div class="unit"><span class="num" id="s">--</span><span class="label">секунд</span></div>
+  </div>
+
+  <div class="total" id="total"></div>
+
+  <div class="progress-wrap">
+    <div class="progress-bg"><div class="progress-fill" id="pbar" style="width:0%"></div></div>
+  </div>
+
+</div>
+
+<script>
+// ══════════════════════════════════════════════════
+//  СОБЫТИЯ — добавляй сюда свои отсчёты
+//  Формат: { name: "Название", target: "YYYY-MM-DDTHH:MM:SSZ" }
+// ══════════════════════════════════════════════════
+const EVENTS = [
+  { name: "День рождения 🎂",  target: "2026-03-14T14:00:00Z" },
+  { name: "Новый год 🎆",      target: "2027-01-01T00:00:00Z" },
+  // { name: "Ещё событие", target: "2026-06-01T00:00:00Z" },
+];
+// ══════════════════════════════════════════════════
+
+let current = 0;
+let timer   = null;
+
+function pad(n) { return String(n).padStart(2, '0'); }
+
+function buildTabs() {
+  const wrap = document.getElementById('event-tabs');
+  wrap.innerHTML = '';
+  if (EVENTS.length <= 1) return; // одно событие — вкладки не нужны
+  EVENTS.forEach((ev, i) => {
+    const btn = document.createElement('button');
+    btn.className = 'tab-btn' + (i === 0 ? ' active' : '');
+    btn.textContent = ev.name;
+    btn.onclick = () => {
+      current = i;
+      document.querySelectorAll('.tab-btn').forEach((b,j) =>
+        b.classList.toggle('active', j === i));
+      tick();
+    };
+    wrap.appendChild(btn);
+  });
+}
+
+function tick() {
+  const ev      = EVENTS[current];
+  const target  = new Date(ev.target).getTime();
+  const start   = new Date(ev.target.replace(/\d{4}-\d{2}-\d{2}/, s => {
+    // Прогресс: считаем от «за год до события»
+    const d = new Date(target);
+    d.setFullYear(d.getFullYear() - 1);
+    return d.toISOString().slice(0, 10);
+  })).getTime();
+
+  document.getElementById('event-name').textContent = ev.name;
+
+  const now   = Date.now();
+  const diff  = target - now;
+
+  if (diff <= 0) {
+    document.getElementById('countdown').innerHTML = `<p class="finished">🎉 Уже наступило!</p>`;
+    document.getElementById('total').textContent = '';
+    document.getElementById('pbar').style.width = '100%';
+    return;
+  }
+
+  const totalSec = Math.floor(diff / 1000);
+  const days     = Math.floor(totalSec / 86400);
+  const hours    = Math.floor((totalSec % 86400) / 3600);
+  const mins     = Math.floor((totalSec % 3600) / 60);
+  const secs     = totalSec % 60;
+
+  document.getElementById('d').textContent = days;
+  document.getElementById('h').textContent = pad(hours);
+  document.getElementById('m').textContent = pad(mins);
+  document.getElementById('s').textContent = pad(secs);
+  document.getElementById('total').textContent =
+    `(Всего ~${totalSec.toLocaleString('ru')} секунд)`;
+
+  // прогресс от «год назад» до цели
+  const fullSpan = target - (target - 365.25 * 86400 * 1000);
+  const elapsed  = fullSpan - diff;
+  const pct      = Math.min(100, Math.max(0, (elapsed / fullSpan) * 100));
+  document.getElementById('pbar').style.width = pct + '%';
+}
+
+buildTabs();
+tick();
+clearInterval(timer);
+timer = setInterval(tick, 1000);
+</script>
+</body>
+</html>
